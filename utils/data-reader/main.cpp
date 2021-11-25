@@ -19,7 +19,7 @@
 /** @file main.cpp
  *  @brief This contains a method to transform csv files into mrmr binary files.
  *
- *  @author Iago Lastra (IagoLast)
+ *  @author Iago Lastra (IagoLast). Modified by Andrew Guy (2021).
  */
 #include <stdio.h>
 #include <string.h>
@@ -49,32 +49,73 @@ bool contains(string key, map<string, byte> mymap) {
 	return true;
 }
 
+
+class InputParser{
+    public:
+        InputParser (int &argc, char **argv){
+            for (int i=1; i < argc; ++i)
+                this->tokens.push_back(std::string(argv[i]));
+        }
+        /// @author iain
+        const std::string& getCmdOption(const std::string &option) const{
+            std::vector<std::string>::const_iterator itr;
+            itr =  std::find(this->tokens.begin(), this->tokens.end(), option);
+            if (itr != this->tokens.end() && ++itr != this->tokens.end()){
+                return *itr;
+            }
+            static const std::string empty_string("");
+            return empty_string;
+        }
+        /// @author iain
+        bool cmdOptionExists(const std::string &option) const{
+            return std::find(this->tokens.begin(), this->tokens.end(), option)
+                   != this->tokens.end();
+        }
+    private:
+        std::vector <std::string> tokens;
+};
+
+void print_help() {
+		printf("MRMR Reader for converting CSV file to binary format for use with fast-mRMR.\n\n");
+        printf("Usage: -f INPUT -o OUTPUT [--gpu]\n\n");
+		printf("Note: If --gpu flag is set, will discard last (n modulo 16) datapoints, where n is the total number of datapoints.\n");
+		exit(-1);
+}
+
 /**
  *@brief Translates a csv file into a binary file.
  *@brief Each different value will be mapped into an integer
  *@brief value from 0 to 255.
  */
 int main(int argc, char* argv[]) {
-	int datasize = 0;
+	uint datasize = 0;
 	uint featuresSize = 0;
 	uint featurePos = 0;
 	uint i = 0;
-	uint limitMod16;
+	uint limitMod16 = 0;
 	string line;
 	string token;
 	byte data;
-	vector<byte> lastCategory; //Cuantas categorias tiene cada feature.
-	vector<map<string, byte> > translationsVector; //Vector de mapas de traduccion
-	map<string, byte> translations; //mapa de traduccion string->byte ara cada feature
+	vector<byte> lastCategory;
+	vector<map<string, byte> > translationsVector;
 
 //Parse console arguments.
-	if (argc < 2) {
-		printf("Usage: <inputfilename>\n");
-		exit(-1);
-	}
-	char* inputFilename = argv[1];
+	InputParser input(argc, argv);
+	if(input.cmdOptionExists("-h")){
+		print_help();
+    }
+
+	const std::string &inputFilename = input.getCmdOption("-f");
+	const std::string &outputFilename = input.getCmdOption("-o");
+	const bool for_gpu = input.cmdOptionExists("--gpu");
+
+    if (inputFilename.empty() || outputFilename.empty()){
+		printf("Please provide input and output filenames. See below for usage instructions: \n\n");
+        print_help();
+    }
+
 	ifstream inputFile(inputFilename);
-	ofstream outputFile("data.mrmr", ios::out | ios::binary);
+	ofstream outputFile(outputFilename, ios::out | ios::binary);
 
 //Count lines and features.
 	if (inputFile.is_open()) {
@@ -88,16 +129,16 @@ int main(int argc, char* argv[]) {
 		while (getline(inputFile, line)) {
 			++datasize;
 		}
-		datasize++;
 
-//Only %16 datasize can be computed on GPU.
-		limitMod16 = (datasize % 16);
-		datasize = datasize - limitMod16;
+		if (for_gpu) {
+			//Only %16 datasize can be computed on GPU.
+			limitMod16 = (datasize % 16);
+			datasize = datasize - limitMod16;
+		}
 
 //write datasize and featuresize:
 		outputFile.write(reinterpret_cast<char*>(&datasize), sizeof(datasize));
-		outputFile.write(reinterpret_cast<char*>(&featuresSize),
-				sizeof(featuresSize));
+		outputFile.write(reinterpret_cast<char*>(&featuresSize), sizeof(featuresSize));
 
 //Set pointer into beginning of the file.
 		inputFile.clear();
@@ -115,11 +156,7 @@ int main(int argc, char* argv[]) {
 		uint lineCount = 0;
 //Read and translate file to binary.
 		while (getline(inputFile, line)) {
-			if (lineCount % 100000 == 0) {
-				printf("...%d / %d\n", lineCount, datasize);
-			}
 			if (lineCount == (datasize)) {
-				printf("Readed Samples: %d\n", lineCount);
 				if (limitMod16 != 0) {
 					printf("Last %d samples ignored.\n", limitMod16);
 				}
@@ -136,11 +173,9 @@ int main(int argc, char* argv[]) {
 					lastCategory[featurePos]++;
 				}
 				data = translationsVector[featurePos][token];
-				//TODO: Use a buffer to write data.
 				outputFile.write(reinterpret_cast<char*>(&data), sizeof(byte));
 			}
 			lineCount++;
-
 		}
 		outputFile.flush();
 		outputFile.close();
