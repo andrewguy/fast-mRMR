@@ -1,10 +1,12 @@
 Welcome to the fast-mRMR wiki!
 
-This is an improved implementation of the classical feature selection method: minimum Redundancy and Maximum Relevance (mRMR); presented by Peng in [1]. 
+This is an improved implementation of the classical feature selection method: minimum Redundancy and Maximum Relevance (mRMR); presented by Peng in [1].
+
+This is a fork of the implementation [here](https://github.com/sramirez/fast-mRMR). This version provides an updated mrmr-reader tool with a few improvements. Importantly, if running for CPU, the mrmr-reader no longer drops some datapoints. It also supports specifying an output filename.
 
 ## Main features
 
-Several optimizations have been introduced in this improved version in order to speed up the costliest computation of the original algorithm: Mutual Information (MI) calculations. These optimizations are described in the followings: 
+Several optimizations have been introduced in this improved version in order to speed up the costliest computation of the original algorithm: Mutual Information (MI) calculations. These optimizations are described in the followings:
 
 - **Cache marginal probabilities**: Instead of obtaining the marginal probabilities in each MI computation, those are calculated only once at the beginning of the program, and cached to be re-used in the next iterations.
 
@@ -30,7 +32,7 @@ The code is organized as follows:
 * _gpu_: CUDA code for GPU implementation ([+info](https://github.com/sramirez/fast-mRMR/wiki/GPU-version)).
 * _spark_: Scala code for distributed processing in Apache Spark platform ([+info](https://github.com/sramirez/fast-mRMR/wiki/Spark-version)).
 * _utils_: this folder contains a data reader program that transforms data in CSV format to the format required by fast-mRMR algorithm (in binary and columnar-wise format) ([+info](https://github.com/sramirez/fast-mRMR/wiki/Data-Reader)). It also includes a data generator method in case we want to generate synthetic data specifying the structure of this data.
-* _examples_: a folder with examples for all versions implemented.   
+* _examples_: a folder with examples for all versions implemented.
 
  
 
