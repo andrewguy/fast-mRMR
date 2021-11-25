@@ -54,7 +54,7 @@ options parseOptions(int argc, char*argv[]) {
 				opts.file = argv[i + 1];
 			}
 			if (strcmp(argv[i], "-a") == 0) {
-				opts.selectedFeatures = atoi(argv[i + 1]) - 1;
+				opts.selectedFeatures = atoi(argv[i + 1]);
 			}
 			if (strcmp(argv[i], "-c") == 0) {
 				opts.classIndex = atoi(argv[i + 1]) - 1;
